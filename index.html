@@ -1,4 +1,238 @@
-x items-center bg-slate-100 p-1 rounded-xl flex-shrink-0">
+<!DOCTYPE html>
+<html lang="id" class="h-full light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS - Enterprise Application Portal</title>
+    
+    <!-- Favicon Inline (Mencegah error 404 pada browser) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            navy: '#0F2747',
+                            blue: '#2563EB',
+                            'blue-hover': '#1D4ED8',
+                            sky: '#0EA5E9',
+                            bg: '#F6F8FB',
+                            surface: '#FFFFFF',
+                            border: '#E5EAF1',
+                            text: '#172033',
+                            muted: '#64748B',
+                            success: '#10B981',
+                            warning: '#F59E0B',
+                            purple: '#6366F1'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    boxShadow: {
+                        'subtle': '0 1px 2px 0 rgba(15, 23, 42, 0.03)',
+                        'card': '0 2px 6px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.02)',
+                        'card-hover': '0 12px 20px -4px rgba(37, 99, 235, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.03)',
+                        'popover': '0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.04)'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Awesome 6 Icons & Google Fonts Inter -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- External Custom Style File -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="bg-[#F6F8FB] text-slate-900 min-h-screen flex flex-col relative selection:bg-blue-100 selection:text-blue-900">
+
+    <!-- Header Navigation -->
+    <header class="bg-white sticky top-0 z-30 border-b border-[#E5EAF1] px-4 sm:px-6 lg:px-8 h-16 flex items-center shadow-subtle">
+        <div class="max-w-[1440px] w-full mx-auto flex items-center justify-between gap-4">
+            
+            <!-- Left: Brand Logo & Title -->
+            <div class="flex items-center space-x-3 cursor-pointer group" onclick="resetFilters()">
+                <div class="w-8 h-8 rounded-xl bg-[#2563EB] text-white flex items-center justify-center font-bold text-base shadow-sm group-hover:bg-blue-700 ui-transition">
+                    N
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-900 text-sm leading-tight tracking-tight">NEXUS</h1>
+                    <p class="text-[11px] font-medium text-slate-400 tracking-tight">Enterprise Application Portal</p>
+                </div>
+            </div>
+
+            <!-- Center: Command Palette Trigger Button -->
+            <button onclick="playAudio('click'); openSpotlight()" class="hidden md:flex items-center space-x-3 bg-slate-50 hover:bg-slate-100/80 text-slate-400 hover:text-slate-600 px-3.5 py-1.5 rounded-xl border border-[#E5EAF1] ui-transition text-xs w-80 justify-between cursor-pointer">
+                <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass text-slate-400 text-[11px]"></i>
+                    <span class="text-slate-400">Cari aplikasi, kata kunci, atau deskripsi...</span>
+                </span>
+                <kbd class="bg-white text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 text-[10px] font-mono shadow-2xs">Ctrl + K</kbd>
+            </button>
+
+            <!-- Right Actions: Voice Assistant, Add Button & Clean Profile -->
+            <div class="flex items-center space-x-3">
+                <button id="voiceBtn" onclick="toggleVoiceRecognition()" class="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 font-medium rounded-xl text-xs flex items-center space-x-1.5 ui-transition border border-slate-200/80 shadow-2xs" title="Perintah Suara (Misal: 'Buka STNK')">
+                    <i id="voiceMicIcon" class="fa-solid fa-microphone text-[12px]"></i>
+                    <span id="voiceBtnText" class="hidden sm:inline">Perintah Suara</span>
+                </button>
+
+                <button onclick="playAudio('click'); openFormModal()" class="px-3.5 py-1.5 bg-[#2563EB] hover:bg-blue-700 text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 ui-transition shadow-sm active:scale-98">
+                    <i class="fa-solid fa-plus text-[10px]"></i>
+                    <span>Tambah Aplikasi</span>
+                </button>
+
+                <div class="h-5 w-px bg-slate-200"></div>
+
+                <div class="flex items-center space-x-2.5 pl-1 cursor-pointer group">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="User Avatar" class="w-8 h-8 rounded-full object-cover border border-slate-200">
+                    <div class="hidden lg:block text-left">
+                        <p class="text-xs font-semibold text-slate-800 leading-tight">Badar Hasyim</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-hover:text-slate-600 ui-transition hidden sm:inline"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero / Page Header Section -->
+    <section class="hero-bg border-b border-[#E5EAF1] py-7 relative overflow-hidden">
+        <div class="absolute right-0 top-0 bottom-0 w-full lg:w-3/5 pointer-events-none opacity-25 lg:opacity-40 overflow-hidden mix-blend-multiply">
+            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1200&auto=format&fit=crop" alt="Corporate Architecture" class="w-full h-full object-cover object-right">
+            <div class="absolute inset-0 bg-gradient-to-r from-[#EFF6FF] via-[#EFF6FF]/60 to-transparent"></div>
+        </div>
+
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                <div class="space-y-1.5">
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[11px] font-semibold border border-blue-100 mb-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span id="backendStatus">Supabase Terhubung</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Portal Aplikasi</h2>
+                    <p class="text-xs text-slate-500 font-medium max-w-xl leading-relaxed">
+                        Akses seluruh aplikasi internal perusahaan dari satu tempat. Perintah suara aktif langsung di browser tanpa batas.
+                    </p>
+                </div>
+
+                <!-- 3 Minimal KPI Statistic Cards (Lengkap dengan ID agar JS berjalan mulus) -->
+                <div class="grid grid-cols-3 gap-3.5 w-full lg:w-auto">
+                    <!-- Total Apps -->
+                    <div class="bg-white p-3.5 rounded-2xl border border-[#E5EAF1] shadow-subtle flex items-center justify-between gap-5 min-w-[150px] hover:border-blue-300 ui-transition cursor-pointer" onclick="resetFilters()">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs flex-shrink-0">
+                                <i class="fa-solid fa-shapes"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-medium text-slate-400">Total Aplikasi</p>
+                                <p id="statTotalApps" class="text-base font-bold text-slate-900 leading-tight">0</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
+                    </div>
+
+                    <!-- Online Apps -->
+                    <div class="bg-white p-3.5 rounded-2xl border border-[#E5EAF1] shadow-subtle flex items-center justify-between gap-5 min-w-[150px] hover:border-emerald-300 ui-transition cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs flex-shrink-0">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-medium text-slate-400">Online</p>
+                                <p id="statActiveApps" class="text-base font-bold text-slate-900 leading-tight">0</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
+                    </div>
+
+                    <!-- Pinned Apps -->
+                    <div class="bg-white p-3.5 rounded-2xl border border-[#E5EAF1] shadow-subtle flex items-center justify-between gap-5 min-w-[150px] hover:border-amber-300 ui-transition cursor-pointer" onclick="setCategoryFilter('FAV')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-xs flex-shrink-0">
+                                <i class="fa-solid fa-star"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-medium text-slate-400">Pinned</p>
+                                <p id="statFavApps" class="text-base font-bold text-slate-900 leading-tight">0</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Voice Command Floating Bar -->
+    <div id="voiceOverlay" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 hidden bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3.5 transition-all">
+        <div class="relative flex items-center justify-center">
+            <span class="w-8 h-8 rounded-full bg-red-500/30 voice-active absolute"></span>
+            <div class="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center text-xs relative z-10 shadow-sm">
+                <i class="fa-solid fa-microphone"></i>
+            </div>
+        </div>
+        <div>
+            <p class="text-xs font-semibold text-slate-100" id="voiceStatusTitle">Mendengarkan suara Anda...</p>
+            <p class="text-[11px] text-slate-400" id="voiceStatusTranscript">Katakan: "Buka STNK", "Buka Proms", dsb.</p>
+        </div>
+        <button onclick="stopVoiceRecognition()" class="ml-2 text-slate-400 hover:text-white text-xs p-1">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+        
+        <!-- Search & Control Toolbar -->
+        <div class="space-y-3">
+            <div class="relative w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="searchInput" onkeyup="filterApps()" placeholder="Cari aplikasi, kata kunci, atau deskripsi..." class="w-full pl-9 pr-16 py-2.5 rounded-2xl border border-[#E5EAF1] bg-white focus:outline-none focus:border-blue-500 text-xs text-slate-800 ui-transition placeholder-slate-400 shadow-subtle">
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    <button onclick="clearSearch()" id="clearSearchBtn" class="hidden text-slate-400 hover:text-slate-600 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <kbd class="hidden sm:inline text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">⌘ K</kbd>
+                </div>
+            </div>
+
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-1">
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" id="categoryTabs">
+                    <button onclick="playAudio('hover'); setCategoryFilter('ALL')" data-cat="ALL" class="cat-btn px-4 py-1.5 rounded-full text-xs font-semibold bg-[#2563EB] text-white shadow-xs ui-transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-border-all text-[10px]"></i> Semua
+                    </button>
+                    <button onclick="playAudio('hover'); setCategoryFilter('FAV')" data-cat="FAV" class="cat-btn px-4 py-1.5 rounded-full text-xs font-medium text-slate-600 hover:text-slate-900 border border-[#E5EAF1] bg-white ui-transition flex items-center gap-1.5">
+                        <i class="fa-regular fa-star text-amber-500 text-[10px]"></i> Pinned
+                    </button>
+                    <button onclick="playAudio('hover'); setCategoryFilter('Operasional')" data-cat="Operasional" class="cat-btn px-4 py-1.5 rounded-full text-xs font-medium text-slate-600 hover:text-slate-900 border border-[#E5EAF1] bg-white ui-transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-gear text-slate-400 text-[10px]"></i> Operasional
+                    </button>
+                    <button onclick="playAudio('hover'); setCategoryFilter('HR & Administrasi')" data-cat="HR & Administrasi" class="cat-btn px-4 py-1.5 rounded-full text-xs font-medium text-slate-600 hover:text-slate-900 border border-[#E5EAF1] bg-white ui-transition flex items-center gap-1.5">
+                        <i class="fa-regular fa-user text-slate-400 text-[10px]"></i> HR & Admin
+                    </button>
+                    <button onclick="playAudio('hover'); setCategoryFilter('Keuangan & CSR')" data-cat="Keuangan & CSR" class="cat-btn px-4 py-1.5 rounded-full text-xs font-medium text-slate-600 hover:text-slate-900 border border-[#E5EAF1] bg-white ui-transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-briefcase text-slate-400 text-[10px]"></i> Finance & CSR
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2.5 self-end lg:self-auto">
+                    <div class="flex items-center bg-slate-100 p-1 rounded-xl flex-shrink-0">
                         <button onclick="playAudio('click'); setViewMode('grid')" id="btnViewGrid" class="p-1.5 rounded-lg text-xs font-medium ui-transition bg-white text-blue-600 shadow-xs" title="Grid View">
                             <i class="fa-solid fa-border-all"></i>
                         </button>
@@ -18,6 +252,7 @@ x items-center bg-slate-100 p-1 rounded-xl flex-shrink-0">
             </div>
         </div>
 
+        <!-- Favorite Applications Section -->
         <div id="favoritesSection" class="space-y-3 pt-2">
             <div class="flex items-center justify-between">
                 <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -29,6 +264,7 @@ x items-center bg-slate-100 p-1 rounded-xl flex-shrink-0">
             <div id="favAppsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5 hidden"></div>
         </div>
 
+        <!-- All Applications Grid Section -->
         <div class="space-y-3 pt-2">
             <div class="flex justify-between items-center">
                 <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -66,7 +302,7 @@ x items-center bg-slate-100 p-1 rounded-xl flex-shrink-0">
         </div>
     </div>
 
-    <!-- Form Add / Edit Modal -->
+    <!-- Form Add / Edit Modal (Bersih Tanpa Kolom Email) -->
     <div id="appModal" class="fixed inset-0 bg-slate-900/20 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-popover border border-[#E5EAF1] ui-transition scale-95 opacity-0 duration-150" id="appModalBox">
             <div class="flex justify-between items-center mb-4 pb-2.5 border-b border-slate-100">
@@ -129,14 +365,14 @@ x items-center bg-slate-100 p-1 rounded-xl flex-shrink-0">
         </div>
     </div>
 
-    <!-- Delete Modal -->
+    <!-- Delete Confirmation Modal -->
     <div id="deleteModal" class="fixed inset-0 bg-slate-900/20 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl max-w-xs w-full p-5 shadow-popover border border-[#E5EAF1] text-center">
             <div class="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mx-auto mb-3 text-base">
                 <i class="fa-solid fa-trash-can"></i>
             </div>
             <h3 class="font-bold text-sm text-slate-900 mb-1">Hapus Aplikasi?</h3>
-            <p class="text-xs text-slate-500 mb-4">Aplikasi <strong id="deleteAppName" class="text-slate-800"></strong> akan dihapus permanen.</p>
+            <p class="text-xs text-slate-500 mb-4">Aplikasi <strong id="deleteAppName" class="text-slate-800"></strong> akan dihapus secara permanen dari Supabase.</p>
             <div class="flex justify-center space-x-2">
                 <button onclick="toggleModal('deleteModal')" class="px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-800 rounded-xl border border-slate-200 ui-transition">Batal</button>
                 <button id="confirmDeleteBtn" onclick="executeDelete()" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white font-medium text-xs rounded-xl ui-transition shadow-xs">Ya, Hapus</button>
@@ -144,25 +380,7 @@ x items-center bg-slate-100 p-1 rounded-xl flex-shrink-0">
         </div>
     </div>
 
-    <!-- Info Modal -->
-    <div id="guideModal" class="fixed inset-0 bg-slate-900/20 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-xl w-full p-5 shadow-popover border border-[#E5EAF1] max-h-[85vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-3 pb-2.5 border-b border-slate-100">
-                <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-database text-blue-600 text-xs"></i> Konfigurasi Database Supabase
-                </h3>
-                <button onclick="toggleModal('guideModal')" class="text-slate-400 hover:text-slate-600 text-sm">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <p class="text-xs text-slate-600">Aplikasi terhubung langsung ke Supabase Cloud Database dan di-host di GitHub Pages.</p>
-            <div class="mt-4 text-right">
-                <button onclick="toggleModal('guideModal')" class="px-4 py-2 bg-[#2563EB] text-white font-medium rounded-xl text-xs hover:bg-blue-700 ui-transition shadow-xs">Tutup</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- External App Logic -->
+    <!-- External JavaScript Application Logic -->
     <script src="app.js"></script>
 </body>
 </html>
