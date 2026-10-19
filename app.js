@@ -11,9 +11,9 @@ if (SUPABASE_URL && window.supabase) {
 
 // Data cadangan lokal jika koneksi Supabase terputus
 const fallbackData = [
-    { id: 1, name: "STNK", description: "Monitoring dokumen Pajak & STNK Kendaraan Operasional di Site.", link: "https://pajakkendaraank2.netlify.app/", category: "Operasional" },
-    { id: 2, name: "Proms", description: "Memantau Pelaksanaan Project", link: "https://link-proms.com", category: "Operasional" },
-    { id: 3, name: "Monitoring Stock BBM", description: "Monitoring ketersediaan BBM di Site", link: "https://link-bbm.com", category: "Operasional" }
+    { id: 1, name: "STNK", description: "Monitoring dokumen Pajak & STNK Kendaraan Operasional di Site.", link: "https://pajakkendaraank2.netlify.app/", category: "Operasional", icon: "fa-car" },
+    { id: 2, name: "Proms", description: "Memantau Pelaksanaan Project", link: "https://link-proms.com", category: "Operasional", icon: "fa-chart-line" },
+    { id: 3, name: "Monitoring Stock BBM", description: "Monitoring ketersediaan BBM di Site", link: "https://link-bbm.com", category: "Operasional", icon: "fa-gas-pump" }
 ];
 
 let allApps = [];
@@ -120,15 +120,16 @@ async function handleFormSubmit(e) {
     const keterangan = document.getElementById('formKeterangan').value.trim();
     const link = document.getElementById('formLink').value.trim();
     const kategori = document.getElementById('formKategori').value;
-    const icon = document.getElementById('formIcon') ? document.getElementById('formIcon').value : 'fa-cube';
+    const iconEl = document.getElementById('formIcon');
+    const iconVal = iconEl ? iconEl.value.trim() : 'fa-cube';
 
-    // Payload disesuaikan tepat dengan kolom tabel Supabase
+    // Payload utama disesuaikan tepat dengan kolom tabel Supabase
     const appPayload = {
         name: nama,
         description: keterangan,
         link: link,
         category: kategori,
-        icon: icon
+        icon: iconVal || 'fa-cube'
     };
 
     const saveBtn = document.getElementById('saveBtn');
@@ -137,18 +138,47 @@ async function handleFormSubmit(e) {
 
     try {
         if (supabaseClient) {
+            let resError = null;
+
             if (idVal && idVal !== "") {
+                // UPDATE data
                 const { error } = await supabaseClient
                     .from('apps')
                     .update(appPayload)
                     .eq('id', idVal);
-                if (error) throw error;
+                resError = error;
+
+                // Jika gagal karena kolom 'icon' belum ada di tabel Supabase user, retry tanpa field icon
+                if (resError && resError.message && resError.message.includes('icon')) {
+                    console.warn("Kolom icon belum ada di tabel Supabase, mencoba simpan tanpa kolom icon...");
+                    delete appPayload.icon;
+                    const retry = await supabaseClient
+                        .from('apps')
+                        .update(appPayload)
+                        .eq('id', idVal);
+                    resError = retry.error;
+                }
+
+                if (resError) throw resError;
                 showToast("Aplikasi berhasil diperbarui!");
             } else {
+                // INSERT data baru
                 const { error } = await supabaseClient
                     .from('apps')
                     .insert([appPayload]);
-                if (error) throw error;
+                resError = error;
+
+                // Fallback retry jika kolom icon belum ada
+                if (resError && resError.message && resError.message.includes('icon')) {
+                    console.warn("Kolom icon belum ada di tabel Supabase, mencoba insert tanpa kolom icon...");
+                    delete appPayload.icon;
+                    const retry = await supabaseClient
+                        .from('apps')
+                        .insert([appPayload]);
+                    resError = retry.error;
+                }
+
+                if (resError) throw resError;
                 showToast("Aplikasi baru berhasil ditambahkan!");
             }
             await loadAppsFromSupabase();
@@ -165,7 +195,7 @@ async function handleFormSubmit(e) {
         closeFormModal();
     } catch (err) {
         console.error("Error saving app:", err);
-        showFormError("Gagal menyimpan ke Supabase: " + err.message);
+        showFormError("Gagal menyimpan ke Supabase: " + (err.message || err));
     } finally {
         saveBtn.disabled = false;
         saveBtn.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i> <span>Simpan</span>';
