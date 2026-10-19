@@ -339,6 +339,67 @@
                     </div>
                 </div>
 
+                <!-- Pemilih Ikon Aplikasi (Icon Picker) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                        <span>Pilih Ikon Aplikasi</span>
+                        <span id="selectedIconLabel" class="text-[10px] text-blue-600 font-mono font-medium">fa-cube</span>
+                    </label>
+                    <input type="hidden" id="formIcon" value="fa-cube">
+                    
+                    <div class="grid grid-cols-8 gap-2 p-2 bg-slate-50 border border-slate-200/80 rounded-xl" id="iconPickerGrid">
+                        <!-- Ikon pilihan standar kantor/site -->
+                        <button type="button" onclick="selectAppIcon('fa-cube')" data-icon="fa-cube" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-blue-600 border border-blue-500 shadow-xs transition" title="Default Cube">
+                            <i class="fa-solid fa-cube"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-car')" data-icon="fa-car" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Kendaraan / STNK">
+                            <i class="fa-solid fa-car"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-truck')" data-icon="fa-truck" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Truk / Logistik">
+                            <i class="fa-solid fa-truck"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-gas-pump')" data-icon="fa-gas-pump" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="BBM / Stock">
+                            <i class="fa-solid fa-gas-pump"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-tree')" data-icon="fa-tree" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Kebun / Lingkungan">
+                            <i class="fa-solid fa-tree"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-file-invoice')" data-icon="fa-file-invoice" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Laporan / Dokumen / CSR">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-chart-line')" data-icon="fa-chart-line" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Statistik / PDCA / 5R">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-calendar-days')" data-icon="fa-calendar-days" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Jadwal / Cuti">
+                            <i class="fa-solid fa-calendar-days"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-users')" data-icon="fa-users" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Karyawan / HR">
+                            <i class="fa-solid fa-users"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-list-check')" data-icon="fa-list-check" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Checklist / Inspeksi">
+                            <i class="fa-solid fa-list-check"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-building')" data-icon="fa-building" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Head Office / Gedung">
+                            <i class="fa-solid fa-building"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-warehouse')" data-icon="fa-warehouse" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Gudang / Site">
+                            <i class="fa-solid fa-warehouse"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-gear')" data-icon="fa-gear" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Sistem / Konfigurasi">
+                            <i class="fa-solid fa-gear"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-shield-halved')" data-icon="fa-shield-halved" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="K3 / Keamanan">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-screwdriver-wrench')" data-icon="fa-screwdriver-wrench" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Workshop / Perawatan">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                        </button>
+                        <button type="button" onclick="selectAppIcon('fa-globe')" data-icon="fa-globe" class="icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition" title="Website / Portal Global">
+                            <i class="fa-solid fa-globe"></i>
+                        </button>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Deskripsi Aplikasi</label>
                     <textarea id="formKeterangan" rows="2" placeholder="Fungsi singkat aplikasi..." class="w-full p-2.5 text-xs rounded-xl border border-[#E5EAF1] bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500 text-slate-800"></textarea>
