@@ -22,7 +22,7 @@ let activeCategory = 'ALL';
 let currentViewMode = 'grid';
 let deleteTargetId = null;
 
-// Fungsi normalisasi toleran: menerima format kolom 'name'/'nama', 'description'/'keterangan', 'category'/'kategori'
+// Fungsi normalisasi toleran: menerima format kolom 'name'/'nama', 'description'/'keterangan', 'category'/'kategori', serta 'icon'
 function normalizeAppData(item) {
     if (!item) return null;
     return {
@@ -31,6 +31,7 @@ function normalizeAppData(item) {
         keterangan: item.description || item.keterangan || item.desc || '',
         link: item.link || item.url || '',
         kategori: item.category || item.kategori || 'Operasional',
+        icon: item.icon || '',
         created_at: item.created_at || null
     };
 }
@@ -119,13 +120,15 @@ async function handleFormSubmit(e) {
     const keterangan = document.getElementById('formKeterangan').value.trim();
     const link = document.getElementById('formLink').value.trim();
     const kategori = document.getElementById('formKategori').value;
+    const icon = document.getElementById('formIcon') ? document.getElementById('formIcon').value : 'fa-cube';
 
     // Payload disesuaikan tepat dengan kolom tabel Supabase
     const appPayload = {
         name: nama,
         description: keterangan,
         link: link,
-        category: kategori
+        category: kategori,
+        icon: icon
     };
 
     const saveBtn = document.getElementById('saveBtn');
@@ -360,7 +363,28 @@ function processVoiceCommand(text) {
 // =========================================================================
 // 5. UI DISPLAY & RENDERING
 // =========================================================================
-function getAppStyling(name) {
+function getAppStyling(app) {
+    // Jika user sudah memilih ikon secara custom di database, utamakan ikon tersebut
+    if (app && app.icon && app.icon.trim() !== '') {
+        const customIcon = app.icon.trim();
+        // Berikan aksen warna selaras berdasarkan jenis ikon
+        if (customIcon.includes('car') || customIcon.includes('truck')) {
+            return { icon: customIcon, iconBg: 'bg-teal-600 text-white', badgeBg: 'bg-teal-50 text-teal-600 border-teal-100' };
+        }
+        if (customIcon.includes('tree') || customIcon.includes('invoice')) {
+            return { icon: customIcon, iconBg: 'bg-emerald-600 text-white', badgeBg: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
+        }
+        if (customIcon.includes('gas') || customIcon.includes('wrench')) {
+            return { icon: customIcon, iconBg: 'bg-amber-500 text-white', badgeBg: 'bg-amber-50 text-amber-600 border-amber-100' };
+        }
+        if (customIcon.includes('chart') || customIcon.includes('calendar') || customIcon.includes('users')) {
+            return { icon: customIcon, iconBg: 'bg-blue-600 text-white', badgeBg: 'bg-blue-50 text-blue-600 border-blue-100' };
+        }
+        return { icon: customIcon, iconBg: 'bg-slate-800 text-white', badgeBg: 'bg-slate-100 text-slate-600 border-slate-200' };
+    }
+
+    // Fallback otomatis jika data lama belum memiliki nilai kolom 'icon'
+    const name = (typeof app === 'string') ? app : (app?.nama || '');
     const lower = (name || '').toLowerCase();
     if (lower.includes('cuti') || lower.includes('tiket')) {
         return { icon: 'fa-calendar-days', iconBg: 'bg-blue-600 text-white', badgeBg: 'bg-blue-50 text-blue-600 border-blue-100' };
@@ -510,7 +534,7 @@ function launchApp(e, url) {
 }
 
 function renderSingleCardHTML(app) {
-    const style = getAppStyling(app.nama);
+    const style = getAppStyling(app);
     const hasLink = app.link && app.link.trim() !== '';
     const isFav = favoriteAppNames.includes(app.nama);
 
@@ -590,7 +614,7 @@ function displayAppList(apps) {
     }
 
     listContainer.innerHTML = apps.map(app => {
-        const style = getAppStyling(app.nama);
+        const style = getAppStyling(app);
         const hasLink = app.link && app.link.trim() !== '';
 
         return `
@@ -643,66 +667,25 @@ function toggleFavorite(appName) {
 }
 
 // =========================================================================
-// 6. SPOTLIGHT SEARCH (CTRL + K)
+// 7. FORM MODAL CONTROLS & ICON PICKER
 // =========================================================================
-function openSpotlight() {
-    const modal = document.getElementById('spotlightModal');
-    const box = document.getElementById('spotlightBox');
-    const input = document.getElementById('spotlightInput');
+function selectAppIcon(iconClass) {
+    playAudio('click');
+    const input = document.getElementById('formIcon');
+    const label = document.getElementById('selectedIconLabel');
+    if (input) input.value = iconClass;
+    if (label) label.innerText = iconClass;
 
-    if (!modal || !box || !input) return;
-
-    modal.classList.remove('hidden');
-    setTimeout(() => box.classList.remove('scale-95', 'opacity-0'), 10);
-    input.value = '';
-    input.focus();
-    handleSpotlightSearch();
+    // Perbarui visual border aktif pada grid pilihan ikon
+    document.querySelectorAll('.icon-choice-btn').forEach(btn => {
+        if (btn.getAttribute('data-icon') === iconClass) {
+            btn.className = "icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-blue-600 border-2 border-blue-600 shadow-xs transition";
+        } else {
+            btn.className = "icon-choice-btn w-8 h-8 rounded-lg flex items-center justify-center text-xs bg-white text-slate-600 border border-slate-200 hover:border-blue-400 transition";
+        }
+    });
 }
 
-function closeSpotlight() {
-    const modal = document.getElementById('spotlightModal');
-    const box = document.getElementById('spotlightBox');
-    if (!modal || !box) return;
-
-    box.classList.add('scale-95', 'opacity-0');
-    setTimeout(() => modal.classList.add('hidden'), 150);
-}
-
-function handleSpotlightSearch() {
-    const input = document.getElementById('spotlightInput');
-    const query = input ? input.value.toLowerCase().trim() : '';
-    const resultsBox = document.getElementById('spotlightResults');
-    if (!resultsBox) return;
-
-    const matches = allApps.filter(app => 
-        (app.nama && app.nama.toLowerCase().includes(query)) || 
-        (app.keterangan && app.keterangan.toLowerCase().includes(query))
-    );
-
-    if (matches.length === 0) {
-        resultsBox.innerHTML = `<div class="text-center py-5 text-slate-400 text-xs">Tidak ada aplikasi yang cocok dengan "${escapeHtml(query)}"</div>`;
-        return;
-    }
-
-    resultsBox.innerHTML = matches.map(app => `
-        <div onclick="launchApp(event, '${escapeJs(app.link)}'); closeSpotlight()" class="flex items-center justify-between p-2.5 hover:bg-slate-50 rounded-xl cursor-pointer ui-transition group">
-            <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
-                    <i class="fa-solid fa-cube"></i>
-                </div>
-                <div>
-                    <p class="font-bold text-xs text-slate-800 group-hover:text-blue-600">${escapeHtml(app.nama)}</p>
-                    <p class="text-[10px] text-slate-400 line-clamp-1">${escapeHtml(app.keterangan || 'Tanpa deskripsi')}</p>
-                </div>
-            </div>
-            <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 group-hover:text-blue-600"></i>
-        </div>
-    `).join('');
-}
-
-// =========================================================================
-// 7. FORM MODAL CONTROLS
-// =========================================================================
 function openFormModal() {
     hideFormError();
     const form = document.getElementById('appForm');
@@ -710,6 +693,8 @@ function openFormModal() {
     
     const editIdEl = document.getElementById('editAppId');
     if (editIdEl) editIdEl.value = "";
+
+    selectAppIcon('fa-cube'); // Set default icon
 
     const titleEl = document.getElementById('modalTitle');
     if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-plus-circle text-blue-600 text-xs"></i> Tambah Aplikasi Baru';
@@ -743,6 +728,10 @@ function openEditModal(appId) {
     if (ketEl) ketEl.value = app.keterangan || '';
     if (linkEl) linkEl.value = app.link || '';
     if (katEl) katEl.value = app.kategori || 'Operasional';
+
+    // Set ikon yang tersimpan (atau default jika kosong)
+    const iconToSelect = app.icon || getAppStyling(app).icon || 'fa-cube';
+    selectAppIcon(iconToSelect);
 
     const titleEl = document.getElementById('modalTitle');
     if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-600 text-xs"></i> Edit Data Aplikasi';
