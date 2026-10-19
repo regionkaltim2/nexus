@@ -9,6 +9,7 @@ if (SUPABASE_URL && window.supabase) {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
+// Data cadangan lokal jika koneksi Supabase terputus
 const fallbackData = [
     { id: 1, name: "STNK", description: "Monitoring dokumen Pajak & STNK Kendaraan Operasional di Site.", link: "https://pajakkendaraank2.netlify.app/", category: "Operasional" },
     { id: 2, name: "Proms", description: "Memantau Pelaksanaan Project", link: "https://link-proms.com", category: "Operasional" },
@@ -21,7 +22,9 @@ let activeCategory = 'ALL';
 let currentViewMode = 'grid';
 let deleteTargetId = null;
 
+// Fungsi normalisasi toleran: menerima format kolom 'name'/'nama', 'description'/'keterangan', 'category'/'kategori'
 function normalizeAppData(item) {
+    if (!item) return null;
     return {
         id: item.id,
         nama: item.name || item.nama || '',
@@ -69,46 +72,39 @@ function playAudio(type) {
             osc.stop(now + 0.07);
         }
     } catch (e) {
-        console.log('Audio FX error:', e);
-    }
-}
-
-function toggleSound() {
-    soundEnabled = !soundEnabled;
-    const icon = document.getElementById('soundIcon');
-    if (soundEnabled) {
-        icon.className = 'fa-solid fa-volume-high text-xs text-blue-600';
-        playAudio('click');
-    } else {
-        icon.className = 'fa-solid fa-volume-xmark text-xs text-slate-400';
+        console.debug('Audio FX error:', e);
     }
 }
 
 // =========================================================================
-// 3. SUPABASE DATA HANDLER
+// 3. SUPABASE DATA HANDLER (CRUD)
 // =========================================================================
 async function loadAppsFromSupabase() {
+    const statusEl = document.getElementById('backendStatus');
+
     if (!supabaseClient) {
-        document.getElementById('backendStatus').innerText = "Demo Mode";
-        allApps = fallbackData.map(normalizeAppData);
+        if (statusEl) statusEl.innerText = "Demo Mode";
+        allApps = fallbackData.map(normalizeAppData).filter(Boolean);
         renderApps(allApps);
         return;
     }
 
     try {
+        // Ambil data tanpa pemaksaan order kolom 'id' agar tidak gagal jika primary key berbeda
         const { data, error } = await supabaseClient
             .from('apps')
             .select('*');
 
         if (error) throw error;
 
-        document.getElementById('backendStatus').innerText = "Supabase Terhubung";
-        allApps = (data || []).map(normalizeAppData);
+        if (statusEl) statusEl.innerText = "Supabase Terhubung";
+        allApps = (data || []).map(normalizeAppData).filter(Boolean);
         renderApps(allApps);
     } catch (err) {
         console.error("Gagal mengambil data dari Supabase:", err);
         showToast("Gagal memuat data: " + err.message, "error");
-        allApps = fallbackData.map(normalizeAppData);
+        if (statusEl) statusEl.innerText = "Supabase Offline / Fallback";
+        allApps = fallbackData.map(normalizeAppData).filter(Boolean);
         renderApps(allApps);
     }
 }
@@ -124,6 +120,7 @@ async function handleFormSubmit(e) {
     const link = document.getElementById('formLink').value.trim();
     const kategori = document.getElementById('formKategori').value;
 
+    // Payload disesuaikan tepat dengan kolom tabel Supabase
     const appPayload = {
         name: nama,
         description: keterangan,
@@ -282,7 +279,7 @@ function startVoiceRecognition() {
     try {
         recognition.start();
     } catch (e) {
-        console.warn('Recognition start exception:', e);
+        console.debug('Recognition start exception:', e);
     }
 }
 
@@ -301,17 +298,19 @@ function updateVoiceUI(listening) {
     const btnText = document.getElementById('voiceBtnText');
 
     if (listening) {
-        voiceBtn.className = "px-3 py-1.5 bg-red-50 text-red-600 font-semibold rounded-xl text-xs flex items-center space-x-1.5 ui-transition border border-red-200 animate-pulse";
-        micIcon.className = "fa-solid fa-microphone-lines text-[12px] text-red-600";
+        if (voiceBtn) voiceBtn.className = "px-3 py-1.5 bg-red-50 text-red-600 font-semibold rounded-xl text-xs flex items-center space-x-1.5 ui-transition border border-red-200 animate-pulse";
+        if (micIcon) micIcon.className = "fa-solid fa-microphone-lines text-[12px] text-red-600";
         if (btnText) btnText.innerText = "Mendengarkan...";
-        overlay.classList.remove('hidden');
-        document.getElementById('voiceStatusTitle').innerText = "Mendengarkan suara Anda...";
-        document.getElementById('voiceStatusTranscript').innerText = "Katakan: 'Buka STNK', 'Buka Proms', dsb.";
+        if (overlay) overlay.classList.remove('hidden');
+        const titleEl = document.getElementById('voiceStatusTitle');
+        const transcriptEl = document.getElementById('voiceStatusTranscript');
+        if (titleEl) titleEl.innerText = "Mendengarkan suara Anda...";
+        if (transcriptEl) transcriptEl.innerText = "Katakan: 'Buka STNK', 'Buka Proms', dsb.";
     } else {
-        voiceBtn.className = "px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 font-medium rounded-xl text-xs flex items-center space-x-1.5 ui-transition border border-slate-200/80 shadow-2xs";
-        micIcon.className = "fa-solid fa-microphone text-[12px]";
+        if (voiceBtn) voiceBtn.className = "px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 font-medium rounded-xl text-xs flex items-center space-x-1.5 ui-transition border border-slate-200/80 shadow-2xs";
+        if (micIcon) micIcon.className = "fa-solid fa-microphone text-[12px]";
         if (btnText) btnText.innerText = "Perintah Suara";
-        overlay.classList.add('hidden');
+        if (overlay) overlay.classList.add('hidden');
     }
 }
 
@@ -344,8 +343,10 @@ function processVoiceCommand(text) {
     if (matchedApp) {
         playAudio('success');
         showToast(`Membuka ${matchedApp.nama}...`);
-        document.getElementById('voiceStatusTitle').innerText = `Ditemukan: ${matchedApp.nama}!`;
-        document.getElementById('voiceStatusTranscript').innerText = `Membuka aplikasi...`;
+        const titleEl = document.getElementById('voiceStatusTitle');
+        const transcriptEl = document.getElementById('voiceStatusTranscript');
+        if (titleEl) titleEl.innerText = `Ditemukan: ${matchedApp.nama}!`;
+        if (transcriptEl) transcriptEl.innerText = `Membuka aplikasi...`;
 
         setTimeout(() => {
             launchApp(null, matchedApp.link);
@@ -381,14 +382,19 @@ function renderApps(apps) {
     filterApps();
 }
 
+// Pengaman null-check pada statistik agar eksekusi script tidak terhenti
 function updateStatsCounters() {
     const total = allApps.length;
     const active = allApps.filter(a => a.link && a.link.trim() !== '').length;
     const favs = allApps.filter(a => favoriteAppNames.includes(a.nama)).length;
 
-    document.getElementById('statTotalApps').innerText = total;
-    document.getElementById('statActiveApps').innerText = active;
-    document.getElementById('statFavApps').innerText = favs;
+    const elTotal = document.getElementById('statTotalApps');
+    const elActive = document.getElementById('statActiveApps');
+    const elFav = document.getElementById('statFavApps');
+
+    if (elTotal) elTotal.innerText = total;
+    if (elActive) elActive.innerText = active;
+    if (elFav) elFav.innerText = favs;
 }
 
 function setCategoryFilter(category) {
@@ -412,25 +418,29 @@ function setViewMode(mode) {
     const listContainer = document.getElementById('appsList');
 
     if (mode === 'grid') {
-        btnGrid.className = "p-1.5 rounded-lg text-xs font-medium ui-transition bg-white text-blue-600 shadow-xs";
-        btnList.className = "p-1.5 rounded-lg text-xs font-medium ui-transition text-slate-400 hover:text-slate-800";
-        gridContainer.classList.remove('hidden');
-        listContainer.classList.add('hidden');
+        if (btnGrid) btnGrid.className = "p-1.5 rounded-lg text-xs font-medium ui-transition bg-white text-blue-600 shadow-xs";
+        if (btnList) btnList.className = "p-1.5 rounded-lg text-xs font-medium ui-transition text-slate-400 hover:text-slate-800";
+        if (gridContainer) gridContainer.classList.remove('hidden');
+        if (listContainer) listContainer.classList.add('hidden');
     } else {
-        btnList.className = "p-1.5 rounded-lg text-xs font-medium ui-transition bg-white text-blue-600 shadow-xs";
-        btnGrid.className = "p-1.5 rounded-lg text-xs font-medium ui-transition text-slate-400 hover:text-slate-800";
-        gridContainer.classList.add('hidden');
-        listContainer.classList.remove('hidden');
+        if (btnList) btnList.className = "p-1.5 rounded-lg text-xs font-medium ui-transition bg-white text-blue-600 shadow-xs";
+        if (btnGrid) btnGrid.className = "p-1.5 rounded-lg text-xs font-medium ui-transition text-slate-400 hover:text-slate-800";
+        if (gridContainer) gridContainer.classList.add('hidden');
+        if (listContainer) listContainer.classList.remove('hidden');
     }
 }
 
 function filterApps() {
-    const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
-    const sortMode = document.getElementById('sortSelect').value;
+    const searchInput = document.getElementById('searchInput');
+    const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const sortSelect = document.getElementById('sortSelect');
+    const sortMode = sortSelect ? sortSelect.value : 'newest';
     const clearBtn = document.getElementById('clearSearchBtn');
 
-    if (searchVal.length > 0) clearBtn.classList.remove('hidden');
-    else clearBtn.classList.add('hidden');
+    if (clearBtn) {
+        if (searchVal.length > 0) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+    }
 
     let filtered = allApps.filter(app => {
         const appTitle = (app.nama || '').toLowerCase();
@@ -463,19 +473,22 @@ function filterApps() {
 function renderFavoritesSection(apps) {
     const favGrid = document.getElementById('favAppsGrid');
     const favNotice = document.getElementById('favEmptyNotice');
+    if (!favGrid) return;
+
     const pinnedApps = apps.filter(a => favoriteAppNames.includes(a.nama));
 
     if (pinnedApps.length === 0) {
         favGrid.classList.add('hidden');
-        favNotice.classList.remove('hidden');
+        if (favNotice) favNotice.classList.remove('hidden');
         favGrid.innerHTML = '';
     } else {
         favGrid.classList.remove('hidden');
-        favNotice.classList.add('hidden');
+        if (favNotice) favNotice.classList.add('hidden');
         favGrid.innerHTML = pinnedApps.map(app => renderSingleCardHTML(app)).join('');
     }
 }
 
+// Validasi URL HTTP/HTTPS aman untuk mencegah script injection
 function isValidHttpUrl(string) {
     try {
         const url = new URL(string);
@@ -491,6 +504,7 @@ function launchApp(e, url) {
         return;
     }
     playAudio('click');
+    // Tabnapping security protection
     const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
     if (newWindow) newWindow.opener = null;
 }
@@ -551,20 +565,25 @@ function renderSingleCardHTML(app) {
 function displayAppCards(apps) {
     const grid = document.getElementById('appsGrid');
     const emptyState = document.getElementById('emptyState');
-    document.getElementById('appCount').innerText = apps.length;
+    const appCountEl = document.getElementById('appCount');
+    if (appCountEl) appCountEl.innerText = apps.length;
+
+    if (!grid) return;
 
     if (apps.length === 0) {
         grid.innerHTML = '';
-        emptyState.classList.remove('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
         return;
     }
 
-    emptyState.classList.add('hidden');
+    if (emptyState) emptyState.classList.add('hidden');
     grid.innerHTML = apps.map(app => renderSingleCardHTML(app)).join('');
 }
 
 function displayAppList(apps) {
     const listContainer = document.getElementById('appsList');
+    if (!listContainer) return;
+
     if (apps.length === 0) {
         listContainer.innerHTML = '';
         return;
@@ -631,6 +650,8 @@ function openSpotlight() {
     const box = document.getElementById('spotlightBox');
     const input = document.getElementById('spotlightInput');
 
+    if (!modal || !box || !input) return;
+
     modal.classList.remove('hidden');
     setTimeout(() => box.classList.remove('scale-95', 'opacity-0'), 10);
     input.value = '';
@@ -641,13 +662,17 @@ function openSpotlight() {
 function closeSpotlight() {
     const modal = document.getElementById('spotlightModal');
     const box = document.getElementById('spotlightBox');
+    if (!modal || !box) return;
+
     box.classList.add('scale-95', 'opacity-0');
     setTimeout(() => modal.classList.add('hidden'), 150);
 }
 
 function handleSpotlightSearch() {
-    const query = document.getElementById('spotlightInput').value.toLowerCase().trim();
+    const input = document.getElementById('spotlightInput');
+    const query = input ? input.value.toLowerCase().trim() : '';
     const resultsBox = document.getElementById('spotlightResults');
+    if (!resultsBox) return;
 
     const matches = allApps.filter(app => 
         (app.nama && app.nama.toLowerCase().includes(query)) || 
@@ -680,17 +705,24 @@ function handleSpotlightSearch() {
 // =========================================================================
 function openFormModal() {
     hideFormError();
-    document.getElementById('appForm').reset();
-    document.getElementById('editAppId').value = "";
-    document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-plus-circle text-blue-600 text-xs"></i> Tambah Aplikasi Baru';
+    const form = document.getElementById('appForm');
+    if (form) form.reset();
+    
+    const editIdEl = document.getElementById('editAppId');
+    if (editIdEl) editIdEl.value = "";
+
+    const titleEl = document.getElementById('modalTitle');
+    if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-plus-circle text-blue-600 text-xs"></i> Tambah Aplikasi Baru';
     
     const deleteBtn = document.getElementById('deleteAppModalBtn');
     if (deleteBtn) deleteBtn.classList.add('hidden');
     
     const modal = document.getElementById('appModal');
     const box = document.getElementById('appModalBox');
-    modal.classList.remove('hidden');
-    setTimeout(() => box.classList.remove('scale-95', 'opacity-0'), 10);
+    if (modal && box) {
+        modal.classList.remove('hidden');
+        setTimeout(() => box.classList.remove('scale-95', 'opacity-0'), 10);
+    }
 }
 
 function openEditModal(appId) {
@@ -700,26 +732,36 @@ function openEditModal(appId) {
     if (!app) return;
 
     deleteTargetId = appId;
-    document.getElementById('editAppId').value = app.id;
-    document.getElementById('formNama').value = app.nama || '';
-    document.getElementById('formKeterangan').value = app.keterangan || '';
-    document.getElementById('formLink').value = app.link || '';
-    document.getElementById('formKategori').value = app.kategori || 'Operasional';
+    const editIdEl = document.getElementById('editAppId');
+    const namaEl = document.getElementById('formNama');
+    const ketEl = document.getElementById('formKeterangan');
+    const linkEl = document.getElementById('formLink');
+    const katEl = document.getElementById('formKategori');
 
-    document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-600 text-xs"></i> Edit Data Aplikasi';
+    if (editIdEl) editIdEl.value = app.id;
+    if (namaEl) namaEl.value = app.nama || '';
+    if (ketEl) ketEl.value = app.keterangan || '';
+    if (linkEl) linkEl.value = app.link || '';
+    if (katEl) katEl.value = app.kategori || 'Operasional';
+
+    const titleEl = document.getElementById('modalTitle');
+    if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-600 text-xs"></i> Edit Data Aplikasi';
 
     const deleteBtn = document.getElementById('deleteAppModalBtn');
     if (deleteBtn) deleteBtn.classList.remove('hidden');
 
     const modal = document.getElementById('appModal');
     const box = document.getElementById('appModalBox');
-    modal.classList.remove('hidden');
-    setTimeout(() => box.classList.remove('scale-95', 'opacity-0'), 10);
+    if (modal && box) {
+        modal.classList.remove('hidden');
+        setTimeout(() => box.classList.remove('scale-95', 'opacity-0'), 10);
+    }
 }
 
 function closeFormModal() {
     const modal = document.getElementById('appModal');
     const box = document.getElementById('appModalBox');
+    if (!modal || !box) return;
     box.classList.add('scale-95', 'opacity-0');
     setTimeout(() => modal.classList.add('hidden'), 150);
 }
@@ -728,7 +770,8 @@ function confirmDeleteFromModal() {
     closeFormModal();
     const app = allApps.find(a => a.id == deleteTargetId);
     if (app) {
-        document.getElementById('deleteAppName').innerText = app.nama;
+        const nameEl = document.getElementById('deleteAppName');
+        if (nameEl) nameEl.innerText = app.nama;
         toggleModal('deleteModal');
     }
 }
@@ -736,29 +779,33 @@ function confirmDeleteFromModal() {
 function showFormError(msg) {
     const errBox = document.getElementById('formErrorBox');
     const errTxt = document.getElementById('formErrorText');
-    errTxt.innerHTML = msg;
-    errBox.classList.remove('hidden');
+    if (errTxt) errTxt.innerHTML = msg;
+    if (errBox) errBox.classList.remove('hidden');
 }
 
 function hideFormError() {
     const errBox = document.getElementById('formErrorBox');
-    errBox.classList.add('hidden');
+    if (errBox) errBox.classList.add('hidden');
 }
 
 function clearSearch() {
-    document.getElementById('searchInput').value = '';
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
     filterApps();
 }
 
 function resetFilters() {
     playAudio('click');
-    document.getElementById('searchInput').value = '';
-    document.getElementById('sortSelect').value = 'newest';
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    if (searchInput) searchInput.value = '';
+    if (sortSelect) sortSelect.value = 'newest';
     setCategoryFilter('ALL');
 }
 
 function toggleModal(id) {
-    document.getElementById(id).classList.toggle('hidden');
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden');
 }
 
 function showToast(message, type = 'success') {
@@ -766,10 +813,11 @@ function showToast(message, type = 'success') {
     const bgClass = type === 'success' ? 'bg-slate-900 text-white' : 'bg-red-600 text-white';
     const icon = type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-white';
 
-    toast.className = `${bgClass} text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center space-x-2 ui-transition transform translate-y-2 opacity-0 z-50`;
+    toast.className = `${bgClass} text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center space-x-2 ui-transition transform translate-y-2 opacity-0 z-50 pointer-events-auto`;
     toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${escapeHtml(message)}</span>`;
 
     const container = document.getElementById('toastContainer');
+    if (!container) return;
     container.appendChild(toast);
 
     setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
