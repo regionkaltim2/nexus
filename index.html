@@ -971,14 +971,23 @@
         }
 
         function launchApp(e, url) {
-            if (url && url.trim() !== '') {
-                playAudio('click');
-                window.open(url, '_blank');
-            } else {
-                showToast('Link aplikasi belum diset atau offline', 'error');
-            }
+          if (!url || !isValidHttpUrl(url)) {
+            showToast('URL tidak valid atau protokol tidak aman', 'error');
+            return;
+          }
+          playAudio('click');
+          // Buka dengan rel noopener noreferrer untuk isolasi window
+          const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+          if (newWindow) newWindow.opener = null;
         }
-
+         function isValidHttpUrl(string) {
+          try {
+                const url = new URL(string);
+                return url.protocol === "http:" || url.protocol === "https:";
+              } catch (_) {
+                return false;
+              }
+            }
         function renderSingleCardHTML(app) {
             const style = getAppStyling(app.nama);
             const hasLink = app.link && app.link.trim() !== '';
